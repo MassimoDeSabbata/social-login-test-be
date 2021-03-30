@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use GuzzleHttp\Exception\ClientException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Socialite\Facades\Socialite;
 
 class LoginController extends Controller
@@ -53,6 +55,7 @@ class LoginController extends Controller
                 'email_verified_at' => now(),
                 'name' => $user->getName(),
                 'status' => true,
+                'avatar' => $provider === 'facebook' ? "FACEBOOK" :(string) $user->getAvatar(),
             ]
         );
         $userCreated->providers()->updateOrCreate(
@@ -61,14 +64,33 @@ class LoginController extends Controller
                 'provider_id' => $user->getId(),
             ],
             [
-                'avatar' => $user->getAvatar()
+                'avatar' => $provider === 'facebook' ? "FACEBOOK" : $user->getAvatar()
             ]
         );
         $token = $userCreated->createToken('token-name')->plainTextToken;
 
-        error_log("TOKEN:". $token);
+        error_log("TOKEN:". $user->token);
 
-        return ['AccessToken' => $token];
+
+        if($provider === 'facebook'){
+            $this->saveFacebookProfileImage($user, $userCreated);
+        }
+
+        $userCreated['AccessToken'] = $token;
+
+        return $userCreated;
+    }
+
+    protected function saveFacebookProfileImage($user, $userCreated) {
+        $arrContextOptions=[ "http" => [
+            "method" => "GET",
+            "header" => "Authorization: Bearer ".$user->token
+        ]];
+
+        $fileContent = file_get_contents('https://graph.facebook.com/v10.0/'.(string)$user->getId().'/picture?width=500', false, stream_context_create($arrContextOptions));
+
+
+        Storage::disk('local')->put('public/profilepic/'.$userCreated->id.'.jpg', $fileContent);
     }
 
     /**

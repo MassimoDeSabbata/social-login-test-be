@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,7 +25,7 @@ class UserController extends Controller
 
             return 'No user logged';
         }
-        return auth()->user();
+        return new UserResource(auth()->user());
     }
 
     /**
@@ -46,7 +47,12 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        return $user;
+
+/*         if($user->avatar === 'FACEBOOK'){
+            $user->avatar = 'localhost/storage/profilepic/'. $user->id . '.jpg';
+        } */
+
+        return new UserResource($user);
     }
 
     /**
